@@ -2,27 +2,31 @@ import { FormEvent, RefObject, useState } from 'react';
 import { Plus } from 'lucide-react';
 
 interface TaskFormProps {
-  onAddTask: (title: string) => void;
+  onAddTask: (title: string) => Promise<boolean> | void;
   inputRef: RefObject<HTMLInputElement | null>;
+  isSubmitting?: boolean;
 }
 
-export function TaskForm({ onAddTask, inputRef }: TaskFormProps) {
+export function TaskForm({ onAddTask, inputRef, isSubmitting = false }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmed = title.trim();
+    if (isSubmitting) return;
 
+    const trimmed = title.trim();
     if (!trimmed) {
       setError('Please enter a task title before adding.');
       inputRef.current?.focus();
       return;
     }
 
-    onAddTask(trimmed);
-    setTitle('');
-    setError(null);
+    const ok = await onAddTask(trimmed);
+    if (ok !== false) {
+      setTitle('');
+      setError(null);
+    }
   };
 
   return (
@@ -56,10 +60,11 @@ export function TaskForm({ onAddTask, inputRef }: TaskFormProps) {
         </div>
         <button
           type="submit"
-          className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-red-700 active:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 sm:min-h-[42px] cursor-pointer"
+          disabled={isSubmitting}
+          className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 sm:min-h-[42px] cursor-pointer"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          <span>Add Task</span>
+          <span>{isSubmitting ? 'Adding...' : 'Add Task'}</span>
         </button>
       </form>
       {error && (
